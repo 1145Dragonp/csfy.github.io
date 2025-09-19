@@ -1,80 +1,40 @@
-:root{
-  --bg:#fff8f0;          /* 奶油白 */
-  --primary:#00c4b4;     /* 薄荷青 */
-  --accent:#ff6f61;      /* 珊瑚橙 */
-  --gray:#666;
-  --radius:12px;
-  --shadow:0 4px 12px rgba(0,0,0,.08);
-}
-*{
-  box-sizing:border-box}
+/* 白色背景 + 细边框 + 圆角现代感 */
 body{
   margin:0;
-  font-family:"Helvetica Neue",Arial,Helvetica,sans-serif;
-  background:var(--bg);
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  min-height:100vh}
-main{
-  width:90%;
-  max-width:800px;
-  background:#fff;
-  border-radius:var(--radius);
-  box-shadow:var(--shadow);
-  padding:25px}
-h1{
-  margin:0 0 15px;
-  font-size:24px;
-  color:var(--primary)}
-h1 span{
-  color:var(--accent)}
-.bar{
+  font-family:Arial,Helvetica,sans-serif;
+  background:#fff;          /* 纯白 */
+  padding:20px;
+}
+header{
   display:flex;
   gap:10px;
-  align-items:center;
-  margin-bottom:20px}
+  margin-bottom:15px;
+}
 select,button{
-  border:0;
-  padding:8px 14px;
-  border-radius:var(--radius);
+  padding:6px 12px;
+  border:1px solid #ccc;   /* 细边框 */
+  border-radius:4px;       /* 微圆角 */
+  background:#fff;
   cursor:pointer;
-  font-size:14px}
+}
 button{
-  background:var(--primary);
-  color:#fff}
+  border-color:#007bff;
+  color:#007bff;
+}
 button:hover{
-  background:#00a896}
-#prog{
-  flex:1;
-  height:8px;
-  background:#f1f1f1;
-  border-radius:4px;
-  overflow:hidden}
-#bar{
-  height:100%;
-  background:var(--accent);
-  width:0%;
-  transition:width .3s}
+  background:#007bff;
+  color:#fff;
+}
 .panes{
   display:flex;
-  gap:15px}
-.pane{
-  flex:1;
-  display:flex;
-  flex-direction:column}
-label{
-  margin-bottom:6px;
-  font-size:13px;
-  color:var(--gray)}
+  gap:15px;
+}
 textarea{
   flex:1;
-  min-height:200px;
-  border:1px solid #e5e5e5;
-  border-radius:var(--radius);
+  height:300px;
   padding:10px;
+  border:1px solid #ddd;
+  border-radius:4px;
+  resize:none;
   font-size:14px;
-  resize:none}
-textarea:focus{
-  outline:0;
-  border-color:var(--primary)}
+}
