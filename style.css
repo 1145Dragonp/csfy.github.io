@@ -1,0 +1,9 @@
+:root{--bg:#111;--fg:#0f0;--accent:#ff0}
+*{box-sizing:border-box}
+body{margin:0;height:100vh;background:var(--bg);color:var(--fg);font-family:monospace;display:flex;flex-direction:column}
+header{height:50px;display:flex;align-items:center;padding:0 10px;border-bottom:1px solid var(--fg);gap:10px}
+select,button{background:var(--fg);color:var(--bg);border:0;padding:6px 12px;border-radius:4px;cursor:pointer}
+#prog{flex:1;height:8px;background:#000;border-radius:4px;overflow:hidden;margin-left:10px}
+#bar{height:100%;background:var(--accent);width:0%;transition:width .3s}
+.panes{flex:1;display:flex;gap:4px;padding:4px}
+textarea{flex:1;resize:none;background:#000;color:var(--fg);border:1px solid var(--fg);padding:8px;font-size:14px}
