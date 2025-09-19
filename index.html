@@ -1,98 +1,26 @@
 <!doctype html>
-<html>
+<html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>网页AI鬼畜批量翻译器·数学符号优先版</title>
-<style>
-body{font-family:monospace;background:#111;color:#0f0}textarea{width:100%;height:40vh}
-button{padding:8px 20px;background:#0f0;color:#111;border:0;cursor:pointer}
-</style>
+<title>三引擎鬼畜翻译器</title>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <h2>1. 粘贴多段中文（空行分段）</h2>
-  <textarea id="in" placeholder="支持任意段数&#10;例：&#10;注意看这个女孩正在跳水&#10;&#10;然后向前翻腾一周半"></textarea>
-  <button id="go">一键鬼畜</button>
-  <h2>2. 鬼畜符号输出（数学/字符优先）</h2>
+<header>
+  <select id="engine">
+    <option value="gemini">Gemini</option>
+    <option value="bing">Bing</option>
+    <option value="local">本地 NLLB</option>
+  </select>
+  <button id="go">▶ 一键鬼畜</button>
+  <div id="prog"><div id="bar"></div></div>
+</header>
+
+<div class="panes">
+  <textarea id="in" placeholder="多段中文，空行分段"></textarea>
   <textarea id="out" readonly></textarea>
+</div>
 
-<script>
-/*****************************************************************
- *  0. 配置：公共演示 key（60/分钟），用完可换自己的
- *****************************************************************/
-const demoKey = 'AIzaSyD4ZSGN7qIT3oea1pKjV4pYFpJqO8p5ZIQ'; // 仅供演示，建议自行申请
-
-/*****************************************************************
- *  1. 全局动态符号缓存：避免重复问 AI
- *****************************************************************/
-const dynMap = {};
-
-/*****************************************************************
- *  2. 问 Gemini 要“1 个数学/符号字符”
- *     输入：单个英文单词
- *     输出：1 个字符（∀ ∂ ∞ … 或 ASCII 或 emoji）
- *****************************************************************/
-async function askSymbol(word){
-  if (dynMap[word]) return dynMap[word];                 // 命中缓存
-  const prompt = `You are a one-char-replacer.
-Rules:
-1. Reply ONLY 1 single character — no word, no emoji, no space, no punctuation.
-2. Prefer math/logic symbols: ∀ ∃ ∑ ∞ ∫ ∂ √ ≤ ≠ ± ° ⋅ …
-3. If none fits, use ASCII symbol: @ # % & * + - / \\ | ~ < >
-4. Last resort: single emoji.
-5. Zero explanation, zero commentary.
-Word: ${word}`;
-  const body = {contents:[{parts:[{text:prompt}]}]};
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${demoKey}`;
-  try{
-    const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-    const json = await res.json();
-    // 取首字符，容错
-    let sym = json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.[0] || word[0];
-    dynMap[word] = sym;
-    return sym;
-  }catch(e){
-    // 网络失败时退为原词首字母
-    return word[0];
-  }
-}
-
-/*****************************************************************
- *  3. 调 Gemini 把整段中文翻成英文
- *****************************************************************/
-async function translateZhEn(text){
-  const body = {contents:[{parts:[{text:`Translate the following Chinese into English only, no extra words:\n${text}`}]}]};
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${demoKey}`;
-  const res = await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const json = await res.json();
-  return json?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
-}
-
-/*****************************************************************
- *  4. 鬼畜后处理：逐词问符号 → 打乱节奏
- *****************************************************************/
-async function guichu(enText){
-  const words = enText.split(/\s+/);
-  const symbols = [];
-  for (const w of words) symbols.push(await askSymbol(w.toLowerCase()));
-  // 打乱顺序
-  return symbols.join('').split('').sort(()=>Math.random()-0.5).join('');
-}
-
-/*****************************************************************
- *  5. 主流程：分段 → 逐段翻译 → 逐段鬼畜 → 输出
- *****************************************************************/
-go.onclick = async () => {
-  const paras = in.value.split(/\n{2,}/);
-  const results = [];
-  for (const p of paras) {
-    const src = p.trim();
-    if (!src) continue;
-    const en = await translateZhEn(src);
-    const gch = await guichu(en);
-    results.push(gch);
-  }
-  out.value = results.join('\n\n');
-};
-</script>
+<script src="app.js"></script>
 </body>
 </html>
