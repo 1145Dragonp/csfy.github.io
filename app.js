@@ -1,76 +1,77 @@
-/******************************** 工具函数 ********************************/
-const $ = q => document.querySelector(q);
+const $ = q => document.querySelector;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-/******************************** 符号缓存 ********************************/
-const dbName = 'guichu_sym';
+/* ----------- 符号缓存 ----------- */
+const dbName = 'cute_sym';
 let db;
 async function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(dbName, 1);
-    req.onerror = e => reject(e);
-    req.onsuccess = e => { db = e.target.result; resolve(); };
+    req.onerror = () => reject();
+    req.onsuccess = () => { db = req.result; resolve(); };
     req.onupgradeneeded = e => {
-      const _db = e.target.result;
-      if (!_db.objectStoreNames.contains('sym')) _db.createObjectStore('sym');
+      if (!e.target.result.objectStoreNames.contains('sym'))
+        e.target.result.createObjectStore('sym');
     };
   });
 }
-async function getSymDB(word) {
+async function getSym(w) {
   return new Promise(res => {
     const tx = db.transaction('sym', 'readonly');
-    const store = tx.objectStore('sym');
-    const req = store.get(word);
+    const req = tx.objectStore('sym').get(w);
     req.onsuccess = () => res(req.result);
   });
 }
-async function setSymDB(word, sym) {
+async function setSym(w, sym) {
   const tx = db.transaction('sym', 'readwrite');
-  tx.objectStore('sym').put(sym, word);
+  tx.objectStore('sym').put(sym, w);
 }
 
-/******************************** 三引擎实现 ********************************/
+/* ----------- 三引擎 ----------- */
 const engines = {
   async gemini(text) {
-    const key = 'AIzaSyD4ZSGN7qIT3oea1pKjV4pYFpJqO8p5ZIQ'; // 演示 key
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${key}`;
-    const body = {contents: [{parts: [{text: `Translate into English only:\n${text}`}]}]};
-    const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-    const j = await r.json();
-    return j?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || text;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyD4ZSGN7qIT3oea1pKjV4pYFpJqO8p5ZIQ`;
+    const body = {contents: [{parts: [{text: `Translate into English:\n${text}`}]}]};
+    try {
+      const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      const j = await r.json();
+      return j?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+    } catch { return ''; }
   },
   async bing(text) {
-    // 极简逆向：拿 cookie 即翻，额度大
-    const res = await fetch('https://www.bing.com/ttranslatev3?isVertical=1&&IG=AD0E49D9F2E4...', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: new URLSearchParams({fromLang: 'zh-Hans', text, to: 'en'})
-    });
-    const j = await res.json();
-    return j?.[0]?.translations?.[0]?.text || text;
+    try {
+      const res = await fetch('https://www.bing.com/ttranslatev3?isVertical=1', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: new URLSearchParams({fromLang: 'zh-Hans', text, to: 'en'})
+      });
+      const j = await res.json();
+      return j?.[0]?.translations?.[0]?.text || '';
+    } catch { return ''; }
   },
-  async local(text) {
-    // 本地 27 MB NLLB 兜底（未放模型时回落原文）
-    if (!window.nllb) return text;
-    return await window.nllb.translate(text);
-  }
+  local(text) { return text; } // 本地无模型时原文输出
 };
 
-/******************************** 鬼畜后处理 ********************************/
+/* ----------- 鬼畜 ----------- */
 async function guichu(en) {
+  if (!en) return '';                       // 保底
   const words = en.split(/\s+/);
   const out = [];
   for (const w of words) {
     const low = w.toLowerCase();
-    let sym = await getSymDB(low);
+    let sym = await getSym(low);
     if (!sym) {
-      // 请求 Gemini 要符号（同 key 复用）
-      const prompt = `You are a one-char-replacer.Reply ONLY 1 character (math/ASCII preferred,emoji last) for "${low}".No explanation.`;
+      // 问 Gemini 要符号
+      const prompt = `You are a one-char-replacer.Reply ONLY 1 character (math/ASCII优先,emoji最后) for "${low}".No explanation.`;
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=AIzaSyD4ZSGN7qIT3oea1pKjV4pYFpJqO8p5ZIQ`;
-      const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})});
-      const j = await r.json();
-      sym = j?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.[0] || low[0];
-      await setSymDB(low, sym);
+      try {
+        const r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({contents: [{parts: [{text: prompt}]}]})});
+        const j = await r.json();
+        sym = j?.candidates?.[0]?.content?.parts?.[0]?.text?.trim()?.[0] || low[0];
+      } catch {
+        sym = low[0];
+      }
+      await setSym(low, sym);
     }
     out.push(sym);
   }
@@ -78,11 +79,14 @@ async function guichu(en) {
   return out.join('').split('').sort(() => Math.random() - 0.5).join('');
 }
 
-/******************************** 主流程 ********************************/
+/* ----------- 主流程 ----------- */
 async function translateParagraphs(texts, engine) {
   const n = texts.length;
   for (let i = 0; i < n; i++) {
-    const en = await engines[engine](texts[i]);
+    let en = await engines[engine](texts[i]);
+    if (!en) { // 当前引擎失败→回落 bing
+      en = await engines.bing(texts[i]);
+    }
     const gch = await guichu(en);
     results[i] = gch;
     $('#bar').style.width = `${((i + 1) / n * 100).toFixed(0)}%`;
@@ -93,6 +97,7 @@ let results = [];
 $('#go').onclick = async () => {
   await openDB();
   const paras = $('#in').value.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+  if (!paras.length) return;
   results = Array(paras.length);
   $('#bar').style.width = '0%';
   await translateParagraphs(paras, $('#engine').value);
